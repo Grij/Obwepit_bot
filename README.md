@@ -46,3 +46,4 @@ Full deploy procedure: `docs/DEPLOYMENT.md`
 - `PRD_Общепіт.md`
 - `Інструкція_по_деплою.md`
 - `docs/FOLLOWER_GUIDE.md`
+- `docs/MODERATOR_CAPABILITIES.md`

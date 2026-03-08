@@ -67,3 +67,4 @@ docker compose up -d --build web
 - Оновлений `CHANGELOG.md`
 - PR з коротким test plan
 - За потреби: оновлення `docs/DEPLOYMENT.md` і `docs/RELEASE.md`
+- Для змін модуля модерації: оновлення `docs/MODERATOR_CAPABILITIES.md`
