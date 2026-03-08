@@ -8,10 +8,10 @@ Move project to a stable engineering flow with branch isolation, predictable rel
 - Add branch model (`main`, `staging`, `develop`).
 - Add core docs and CI syntax checks.
 
-## Phase 2: Team Workflow (next)
-- Add remote repository (GitHub/GitLab).
-- Enable branch protections for `main` and `staging`.
-- Require pull requests and CI green status before merge.
+## Phase 2: Team Workflow (done)
+- Remote repository created: `Grij/Obwepit_bot`.
+- Branch protections enabled for `main` and `staging`.
+- CI workflow restored and active via GitHub Actions.
 
 ## Phase 3: Quality Gates
 - Add automated lint/tests for Python services.

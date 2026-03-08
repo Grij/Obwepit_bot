@@ -20,6 +20,7 @@ Production repository for the `ОБЩЕПІТ` ecosystem:
 - `hotfix/*` — urgent fixes from `main`
 
 Detailed rules: `docs/BRANCHING.md`
+New team onboarding flow: `docs/FOLLOWER_GUIDE.md`
 
 ## Quick Start (Local)
 ```bash
@@ -44,3 +45,4 @@ Full deploy procedure: `docs/DEPLOYMENT.md`
 - `CHANGELOG.md`
 - `PRD_Общепіт.md`
 - `Інструкція_по_деплою.md`
+- `docs/FOLLOWER_GUIDE.md`
