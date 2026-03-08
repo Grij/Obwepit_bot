@@ -32,7 +32,11 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await db.log_incident(target_user.id, "manual_ban", "high", "ban", reason)
         await update.message.reply_text(f"User {target_user.first_name} banned.")
     except Exception as e:
-        await update.message.reply_text(f"Failed: {e}")
+        err = str(e)
+        if "Participant_id_invalid" in err:
+            await update.message.reply_text("Не вдалося забанити: користувач уже недоступний у цьому чаті.")
+        else:
+            await update.message.reply_text(f"Failed: {e}")
 
 async def cmd_mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
@@ -44,7 +48,11 @@ async def cmd_mute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     target_user = update.message.reply_to_message.from_user
     chat_id = update.effective_chat.id
-    duration = int(context.args[0]) if context.args else 300
+    try:
+        duration = int(context.args[0]) if context.args else 300
+    except (TypeError, ValueError):
+        await update.message.reply_text("Usage: /mute <seconds>. Example: /mute 300")
+        return
     
     from telegram import ChatPermissions
     import datetime
@@ -103,6 +111,35 @@ async def cmd_blacklist_list(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         word_list = "\n".join([f"- {w}" for w in words])
         await update.message.reply_text(f"📜 Global Blacklist:\n{word_list}")
+
+
+async def cmd_blacklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Alias command for UX: /blacklist add|remove|list ..."""
+    if not await is_admin(update):
+        return
+    if not context.args:
+        await update.message.reply_text(
+            "Usage:\n"
+            "/blacklist add <word or phrase>\n"
+            "/blacklist remove <word or phrase>\n"
+            "/blacklist list"
+        )
+        return
+
+    action = context.args[0].lower()
+    context.args = context.args[1:]
+
+    if action == "add":
+        await cmd_blacklist_add(update, context)
+        return
+    if action in ("remove", "rm", "del", "delete"):
+        await cmd_blacklist_remove(update, context)
+        return
+    if action == "list":
+        await cmd_blacklist_list(update, context)
+        return
+
+    await update.message.reply_text("Unknown action. Use: add, remove, list.")
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):

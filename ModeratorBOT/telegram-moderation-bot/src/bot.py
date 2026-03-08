@@ -2,7 +2,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler as TGMessag
 from src.handlers.message_handler import MessageHandler
 from src.handlers.admin_commands import (
     cmd_status, cmd_ban, cmd_mute, cmd_rules, 
-    cmd_blacklist_add, cmd_blacklist_remove, cmd_blacklist_list, cmd_stats
+    cmd_blacklist_add, cmd_blacklist_remove, cmd_blacklist_list, cmd_blacklist, cmd_stats
 )
 from src.detectors.spam_detector import SpamDetector
 from src.detectors.flood_detector import FloodDetector
@@ -45,6 +45,7 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("blacklist_add", cmd_blacklist_add))
         self.app.add_handler(CommandHandler("blacklist_remove", cmd_blacklist_remove))
         self.app.add_handler(CommandHandler("blacklist_list", cmd_blacklist_list))
+        self.app.add_handler(CommandHandler("blacklist", cmd_blacklist))
         self.app.add_handler(CommandHandler("stats", cmd_stats))
         
         # Message Handler
