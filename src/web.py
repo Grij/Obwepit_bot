@@ -48,6 +48,26 @@ POST_SIGNATURE_LINK = os.getenv("POST_SIGNATURE_LINK", "https://t.me/obwepit")
 UPLOADS_DIR = "data/uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+async def ensure_moderator_schema(db):
+    """Create missing moderator tables for backward-compatible dashboard reads."""
+    await db.execute('''
+        CREATE TABLE IF NOT EXISTS daily_stats (
+            date DATE,
+            chat_id INTEGER,
+            deleted_count INTEGER DEFAULT 0,
+            PRIMARY KEY (date, chat_id)
+        )
+    ''')
+    await db.execute('''
+        CREATE TABLE IF NOT EXISTS global_blacklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT UNIQUE,
+            added_by INTEGER,
+            added_at TIMESTAMP
+        )
+    ''')
+    await db.commit()
+
 
 # --- Auth helpers ---
 def get_current_user(request: Request):
@@ -615,42 +635,58 @@ async def read_moderator(request: Request):
             "error_msg": "База даних модератора ще не підключена."
         })
 
-    async with aiosqlite.connect(MODERATOR_DB) as db:
-        db.row_factory = aiosqlite.Row
+    try:
+        async with aiosqlite.connect(MODERATOR_DB) as db:
+            db.row_factory = aiosqlite.Row
+            await ensure_moderator_schema(db)
 
-        # Deleted stats for today
-        from datetime import datetime
-        today = datetime.now().date().isoformat()
-        cursor = await db.execute("SELECT SUM(deleted_count) as c FROM daily_stats WHERE date = ?", (today,))
-        row = await cursor.fetchone()
-        today_deleted = row['c'] if row and row['c'] else 0
+            # Deleted stats for today
+            from datetime import datetime
+            today = datetime.now().date().isoformat()
+            cursor = await db.execute("SELECT SUM(deleted_count) as c FROM daily_stats WHERE date = ?", (today,))
+            row = await cursor.fetchone()
+            today_deleted = row['c'] if row and row['c'] else 0
 
-        # Breakdown by chat
-        cursor = await db.execute("SELECT chat_id, deleted_count FROM daily_stats WHERE date = ?", (today,))
-        today_breakdown = await cursor.fetchall()
-        
-        # We can map chat_id to names if they exist in DB_NAME
-        async with aiosqlite.connect(DB_NAME) as main_db:
-            main_db.row_factory = aiosqlite.Row
-            c_cursor = await main_db.execute("SELECT * FROM channels")
-            channels = await c_cursor.fetchall()
-            channels_map = {str(c['chat_id']): c['title'] for c in channels}
+            # Breakdown by chat
+            cursor = await db.execute("SELECT chat_id, deleted_count FROM daily_stats WHERE date = ?", (today,))
+            today_breakdown = await cursor.fetchall()
             
-        enriched_breakdown = []
-        for r in today_breakdown:
-            chat_id_str = str(r['chat_id'])
-            enriched_breakdown.append({
-                "chat_name": channels_map.get(chat_id_str, chat_id_str),
-                "deleted_count": r["deleted_count"]
-            })
+            # We can map chat_id to names if they exist in DB_NAME
+            async with aiosqlite.connect(DB_NAME) as main_db:
+                main_db.row_factory = aiosqlite.Row
+                c_cursor = await main_db.execute("SELECT * FROM channels")
+                channels = await c_cursor.fetchall()
+                channels_map = {str(c['chat_id']): c['title'] for c in channels}
+                
+            enriched_breakdown = []
+            for r in today_breakdown:
+                chat_id_str = str(r['chat_id'])
+                enriched_breakdown.append({
+                    "chat_name": channels_map.get(chat_id_str, chat_id_str),
+                    "deleted_count": r["deleted_count"]
+                })
 
-        # Global Blacklist
-        cursor = await db.execute("SELECT * FROM global_blacklist ORDER BY added_at DESC")
-        blacklist = await cursor.fetchall()
+            # Global Blacklist
+            cursor = await db.execute("SELECT * FROM global_blacklist ORDER BY added_at DESC")
+            blacklist = await cursor.fetchall()
 
-        # Banned Users
-        cursor = await db.execute("SELECT * FROM users WHERE is_banned = 1 ORDER BY last_activity DESC")
-        banned_users = await cursor.fetchall()
+            # Banned Users
+            cursor = await db.execute("SELECT * FROM users WHERE is_banned = 1 ORDER BY last_activity DESC")
+            banned_users = await cursor.fetchall()
+    except Exception as e:
+        return templates.TemplateResponse("moderator.html", {
+            "request": request,
+            "active_page": "moderator",
+            "user_email": get_current_user(request),
+            "user_name": request.session.get("user_name", ""),
+            "today_deleted": 0,
+            "today_breakdown": [],
+            "blacklist": [],
+            "banned_users": [],
+            "app_version": APP_VERSION,
+            "app_last_update": APP_LAST_UPDATE,
+            "error_msg": f"Помилка читання даних модератора: {e}"
+        })
 
     return templates.TemplateResponse("moderator.html", {
         "request": request,
@@ -677,6 +713,7 @@ async def add_moderator_blacklist(
 
     if os.path.exists(MODERATOR_DB):
         async with aiosqlite.connect(MODERATOR_DB) as db:
+            await ensure_moderator_schema(db)
             try:
                 # 0 for dashboard user ID 
                 from datetime import datetime
@@ -702,6 +739,7 @@ async def remove_moderator_blacklist(
 
     if os.path.exists(MODERATOR_DB):
         async with aiosqlite.connect(MODERATOR_DB) as db:
+            await ensure_moderator_schema(db)
             await db.execute('DELETE FROM global_blacklist WHERE word = ?', (word.lower().strip(),))
             await db.commit()
 
