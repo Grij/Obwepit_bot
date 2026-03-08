@@ -1,0 +1,87 @@
+spam_detector:
+  repeat_threshold:
+    count: 3
+    time_window: 60
+  caps_threshold: 0.4
+  emoji_threshold: 0.5
+  url_patterns:
+    - "bit\\.ly"
+    - "t\\.me/\\+"
+    - "casino"
+  bot_patterns:
+    - "вітаю на"
+    - "підпишись"
+    - "заробляй"
+    - "переходь за посиланням"
+  whitelisted_urls:
+    - "bio.site/obwepit"
+
+flood_detector:
+  levels:
+    - name: "warning"
+      messages: 5
+      window: 10
+      action: "delete"
+    - name: "timeout"
+      messages: 10
+      window: 30
+      action: "mute"
+      duration: 300
+    - name: "ban"
+      messages: 20
+      window: 60
+      action: "remove"
+  exclude_admins: true
+  grace_period: 5
+
+fake_distribution:
+  referral_domains:
+    - "t.me/+"
+    - "ref."
+    - "bonus"
+    - "app.link"
+  copy_threshold: 5
+  time_window: 300
+  template_patterns:
+    - "заробляй на дому"
+    - "клікни сюди"
+    - "обмежена пропозиція"
+
+actions:
+  delete:
+    delay: 0
+    notify: false
+  warn:
+    delay: 0
+    notify: true
+    message: "⚠️ Порушення правил групи! Будь ласка, утримайтесь від спаму/флуду."
+  mute:
+    delay: 0
+    notify: true
+    message: "🔇 Вас замучено за порушення правил."
+  restrict:
+    delay: 0
+    notify: true
+    duration: 3600
+  remove:
+    delay: 5
+    notify: true
+    message: "⛔ Вас видалено з групи за систематичні порушення."
+  ban:
+    delay: 0
+    notify: false
+  report_admin:
+    delay: 0
+    notify: false
+    channel: "admin_logs"
+
+bot:
+  # Initial list of allowed chats to monitor
+  allowed_chats:
+    - "@obwepit_dnipro"
+    - "@obwepit_kyiv"
+    - "@barista_family_kh"
+    - "@restofamily_kh"
+    - "@obwepit_kh"
+    - "@molodistkharkiv"
+    - "-1001590322952"

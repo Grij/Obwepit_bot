@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Модератор{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+    <header class="page-header">
+        <div>
+            <h2>Anti-Spam Модератор</h2>
+            <p class="text-secondary">Управління тихим видаленням та глобальними блокуваннями</p>
+        </div>
+    </header>
+
+    {% if error_msg %}
+    <div
+        style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+        {{ error_msg }}
+    </div>
+    {% endif %}
+
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+        <div class="metric-card">
+            <h3 class="metric-title">Видалено сьогодні</h3>
+            <div class="metric-value">{{ today_deleted }}</div>
+            <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem;">Спам та фейки мовчки очищено</p>
+        </div>
+        <div class="metric-card">
+            <h3 class="metric-title">Слів у Blacklist</h3>
+            <div class="metric-value">{{ blacklist|length }}</div>
+            <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem;">Активних заборонених фраз</p>
+        </div>
+        <div class="metric-card">
+            <h3 class="metric-title">Забанено Спамерів</h3>
+            <div class="metric-value">{{ banned_users|length }}</div>
+            <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem;">Довічно відлучені від чатів</p>
+        </div>
+    </div>
+
+    <!-- Stats Breakdown -->
+    <div
+        style="margin-top: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary); font-size: 1.1rem;">Розподіл видалень за сьогодні
+        </h3>
+        {% if today_breakdown %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Чат</th>
+                        <th>Видалено спаму</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in today_breakdown %}
+                    <tr>
+                        <td style="font-weight: 500;">{{ stat.chat_name }}</td>
+                        <td><span
+                                style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(239, 68, 68, 0.1); color: #fca5a5; font-weight: 600;">{{
+                                stat.deleted_count }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-secondary">Сьогодні ще не було видалено жодного повідомлення.</p>
+        {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+
+        <!-- Global Blacklist -->
+        <div
+            style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: var(--text-primary); font-size: 1.1rem;">Глобальний Чорний Список</h3>
+            </div>
+
+            <form action="/moderator/blacklist/add" method="POST"
+                style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <input type="text" name="word" placeholder="Додати слово або фразу..." required
+                    style="flex: 1; padding: 0.5rem 0.75rem; background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary);">
+                <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Додати</button>
+            </form>
+
+            <div class="table-container" style="flex: 1; overflow-y: auto; max-height: 400px; padding: 0;">
+                <table style="margin: 0;">
+                    <thead
+                        style="position: sticky; top: 0; background: var(--bg-card); box-shadow: 0 1px 0 var(--border-color);">
+                        <tr>
+                            <th>Слово / Фраза</th>
+                            <th style="width: 80px; text-align: right;">Дія</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in blacklist %}
+                        <tr>
+                            <td style="font-family: monospace; font-size: 1.1rem; color: #fca5a5;">{{ item.word }}</td>
+                            <td style="text-align: right;">
+                                <form action="/moderator/blacklist/remove" method="POST"
+                                    style="margin: 0; display: inline;">
+                                    <input type="hidden" name="word" value="{{ item.word }}">
+                                    <button type="submit"
+                                        style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem; transition: color 0.2s;"
+                                        onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#94a3b8'"
+                                        title="Видалити">
+                                        ✕
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-secondary" style="text-align: center; padding: 2rem;">Чорний
+                                список порожній</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Banned Users List -->
+        <div
+            style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: var(--text-primary); font-size: 1.1rem;">Заблоковані Спамери</h3>
+            </div>
+
+            <div class="table-container" style="flex: 1; overflow-y: auto; max-height: 450px; padding: 0;">
+                <table style="margin: 0;">
+                    <thead
+                        style="position: sticky; top: 0; background: var(--bg-card); box-shadow: 0 1px 0 var(--border-color);">
+                        <tr>
+                            <th>Користувач</th>
+                            <th>Причина</th>
+                            <th>Дата Блокування</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b_user in banned_users %}
+                        <tr>
+                            <td>
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-weight: 500; color: var(--text-primary);">{{ b_user.first_name or
+                                        'Невідомо' }}</span>
+                                    {% if b_user.username %}
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary);">@{{ b_user.username
+                                        }}</span>
+                                    {% endif %}
+                                    <span style="font-size: 0.75rem; color: #64748b; font-family: monospace;">ID: {{
+                                        b_user.user_id }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span
+                                    style="display: inline-block; padding: 0.15rem 0.5rem; background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-radius: 4px; font-size: 0.85rem;">
+                                    {{ b_user.ban_reason or 'Спам' }}
+                                </span>
+                            </td>
+                            <td style="color: var(--text-secondary); font-size: 0.9rem;">
+                                {{ b_user.last_activity.split('.')[0] if b_user.last_activity else 'N/A' }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-secondary" style="text-align: center; padding: 2rem;">Немає
+                                заблокованих спамерів</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock %}

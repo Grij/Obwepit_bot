@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Постінг{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .channels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    .channel-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .channel-check:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .channel-check input {
+        accent-color: #8b5cf6;
+        width: 16px;
+        height: 16px;
+    }
+
+    .schedule-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin: 1rem 0;
+    }
+
+    .schedule-row label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .schedule-row input[type="radio"] {
+        accent-color: #8b5cf6;
+        flex-shrink: 0;
+    }
+
+    .schedule-row input[type="datetime-local"] {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #e2e8f0;
+        padding: 0.5rem;
+        border-radius: 6px;
+        width: 100%;
+    }
+
+    .pin-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 1rem 0;
+        cursor: pointer;
+    }
+
+    .pin-toggle input {
+        accent-color: #f59e0b;
+        width: 16px;
+        height: 16px;
+    }
+
+    .select-all-btn {
+        background: rgba(139, 92, 246, 0.3);
+        border: 1px solid rgba(139, 92, 246, 0.5);
+        color: #c4b5fd;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .select-all-btn:hover {
+        background: rgba(139, 92, 246, 0.5);
+    }
+
+    .format-toolbar {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.25rem;
+        border-radius: 6px;
+    }
+
+    .format-btn {
+        background: transparent;
+        border: none;
+        color: #e2e8f0;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .format-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    #charCount {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        text-align: right;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Форма постінгу -->
+<div class="glass-panel">
+    <h3>✏️ Редагувати пост #{{ post.id }}</h3>
+
+    <div id="form-error"
+        style="display: none; background: rgba(248, 113, 113, 0.2); color: #fca5a5; padding: 0.75rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(248, 113, 113, 0.3);">
+        ❗️ <b>Помилка:</b> <span id="error-text"></span>
+    </div>
+
+    <form id="postForm" action="/posting/edit/{{ post.id }}" method="POST" enctype="multipart/form-data"
+        style="margin-top: 1rem;">
+
+        <!-- Канали -->
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <label style="font-weight: 600;">Куди постити:</label>
+            <button type="button" class="select-all-btn" onclick="toggleAll()">Обрати всі</button>
+        </div>
+        <div class="channels-grid">
+            {% for ch in channels %}
+            <label class="channel-check">
+                <input type="checkbox" name="channels" value="{{ ch.chat_id }}" {% if ch.chat_id in post_channels
+                    %}checked{% endif %}>
+                {{ ch.title }}
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- Текст -->
+        <div class="form-group">
+            <label>Текст повідомлення (HTML-форматування):</label>
+            <div class="format-toolbar">
+                <button type="button" class="format-btn" onclick="insertTag('<b>', '</b>')"
+                    title="Щільний"><b>B</b></button>
+                <button type="button" class="format-btn" onclick="insertTag('<i>', '</i>')"
+                    title="Курсив"><i>I</i></button>
+                <button type="button" class="format-btn" onclick="insertTag('<u>', '</u>')"
+                    title="Підкреслений"><u>U</u></button>
+                <button type="button" class="format-btn" onclick="insertTag('<code>', '</code>')"
+                    title="Код"><code>&lt;/&gt;</code></button>
+                <button type="button" class="format-btn" onclick="insertLink()" title="Посилання">🔗</button>
+            </div>
+            <textarea name="post_text" id="post_text" rows="5" required
+                placeholder="Текст вашого поста...">{{ post.text }}</textarea>
+            <div id="charCount" style="color: #94a3b8;">0 / 4096</div>
+        </div>
+
+        <!-- Медіа -->
+        <div class="form-group">
+            <label>Медіа (фото або відео, завантажте нове щоб замінити старе):</label>
+            {% if post.media_path %}
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">
+                Поточне: <code>{{ post.media_path.split('/')[-1] }}</code> ({{ post.media_type }})
+            </div>
+            {% endif %}
+            <input type="file" name="media" id="media_input" accept="image/*,video/*"
+                style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 0.5rem; border-radius: 6px; width: 100%;">
+        </div>
+
+        <!-- Розклад -->
+        <div style="margin-top: 1.5rem;">
+            <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Коли відправити:</label>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <label id="lbl-now"
+                    style="flex: 1; text-align: center; background: {% if not post.scheduled_at %}rgba(139, 92, 246, 0.2){% else %}rgba(255, 255, 255, 0.05){% endif %}; padding: 0.75rem; border-radius: 8px; cursor: pointer; border: 1px solid {% if not post.scheduled_at %}#8b5cf6{% else %}transparent{% endif %}; transition: all 0.2s;">
+                    <input type="radio" name="schedule_type" value="now" {% if not post.scheduled_at %}checked{% endif
+                        %} style="display: none;" onchange="toggleSchedule()">
+                    🚀 Відправити зараз
+                </label>
+                <label id="lbl-sched"
+                    style="flex: 1; text-align: center; background: {% if post.scheduled_at %}rgba(139, 92, 246, 0.2){% else %}rgba(255, 255, 255, 0.05){% endif %}; padding: 0.75rem; border-radius: 8px; cursor: pointer; border: 1px solid {% if post.scheduled_at %}#8b5cf6{% else %}transparent{% endif %}; transition: all 0.2s;">
+                    <input type="radio" name="schedule_type" value="scheduled" {% if post.scheduled_at %}checked{% endif
+                        %} style="display: none;" onchange="toggleSchedule()">
+                    ⏰ Запланувати
+                </label>
+            </div>
+
+            <div id="schedule-picker"
+                style="{% if not post.scheduled_at %}display: none;{% else %}display: block;{% endif %} margin-bottom: 1rem; position: relative;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Оберіть дату
+                    та час:</label>
+                <input type="datetime-local" name="scheduled_at" id="scheduled_at" value="{{ post_date_str }}" {% if
+                    post.scheduled_at %}required{% endif %}
+                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 0.75rem; border-radius: 8px; width: 100%; font-family: 'Inter', sans-serif; font-size: 1rem;">
+            </div>
+        </div>
+
+        <!-- Пін та Автовидалення -->
+        <div style="display: flex; gap: 2rem; align-items: center; margin: 1rem 0; flex-wrap: wrap;">
+            <label class="pin-toggle" style="margin: 0;">
+                <input type="checkbox" name="pin_after" value="1" {% if post.pin_after %}checked{% endif %}>
+                📌 Закріпити після постінгу
+            </label>
+
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                🕛 Автовидалення:
+                <select name="delete_after"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 0.4rem; border-radius: 6px;">
+                    <option value="0" style="color: #0f172a;" {% if not post.delete_after %}selected{% endif %}>Ніколи
+                    </option>
+                    <option value="1" style="color: #0f172a;" {% if post.delete_after==1 %}selected{% endif %}>Через 1
+                        годину</option>
+                    <option value="12" style="color: #0f172a;" {% if post.delete_after==12 %}selected{% endif %}>Через
+                        12 годин</option>
+                    <option value="24" style="color: #0f172a;" {% if post.delete_after==24 %}selected{% endif %}>Через
+                        24 години</option>
+                    <option value="48" style="color: #0f172a;" {% if post.delete_after==48 %}selected{% endif %}>Через
+                        48 годин</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Підпис -->
+        <div
+            style="margin: 1rem 0; padding: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 0.8rem; color: #64748b;">
+            🏷️ Підпис: <a href="{{ signature_link }}" style="color: #8b5cf6;">[ОБЩЕПІТ]</a>
+            <span style="margin-left: 0.5rem; color: #475569;">→ {{ signature_link }}</span>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+            <button type="submit" style="background: #8b5cf6; flex: 1;">💾 Зберегти зміни</button>
+            <a href="/posting"
+                style="background: rgba(255,255,255,0.1); color: white; padding: 0.6rem 1.2rem; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center; font-weight: 500;">Назад</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleAll() {
+        const boxes = document.querySelectorAll('input[name="channels"]');
+        const allChecked = [...boxes].every(b => b.checked);
+        boxes.forEach(b => b.checked = !allChecked);
+    }
+
+    function toggleSchedule() {
+        const isNow = document.querySelector('input[value="now"]').checked;
+        const picker = document.getElementById('schedule-picker');
+        const lblNow = document.getElementById('lbl-now');
+        const lblSched = document.getElementById('lbl-sched');
+
+        if (isNow) {
+            picker.style.display = 'none';
+            document.getElementById('scheduled_at').removeAttribute('required');
+
+            lblNow.style.background = 'rgba(139, 92, 246, 0.2)';
+            lblNow.style.borderColor = '#8b5cf6';
+            lblSched.style.background = 'rgba(255, 255, 255, 0.05)';
+            lblSched.style.borderColor = 'transparent';
+        } else {
+            picker.style.display = 'block';
+            document.getElementById('scheduled_at').setAttribute('required', 'true');
+
+            lblNow.style.background = 'rgba(255, 255, 255, 0.05)';
+            lblNow.style.borderColor = 'transparent';
+            lblSched.style.background = 'rgba(139, 92, 246, 0.2)';
+            lblSched.style.borderColor = '#8b5cf6';
+        }
+    }
+
+    // Текстовий редактор
+    const textArea = document.getElementById('post_text');
+    const mediaInput = document.getElementById('media_input');
+    const charCount = document.getElementById('charCount');
+
+    function insertTag(openTag, closeTag) {
+        if (!textArea) return;
+        const start = textArea.selectionStart;
+        const end = textArea.selectionEnd;
+        const text = textArea.value;
+        const before = text.substring(0, start);
+        const selected = text.substring(start, end);
+        const after = text.substring(end);
+
+        textArea.value = before + openTag + selected + closeTag + after;
+        textArea.focus();
+        textArea.selectionStart = start + openTag.length;
+        textArea.selectionEnd = start + openTag.length + selected.length;
+        updateCharCount();
+    }
+
+    function insertLink() {
+        const url = prompt("Введіть URL:");
+        if (url) {
+            insertTag(`<a href="${url}">`, '</a>');
+        }
+    }
+
+    function updateCharCount() {
+        if (!textArea) return;
+        const len = textArea.value.length;
+        const hasMedia = (mediaInput && mediaInput.files.length > 0) || '{{ post.media_path }}' !== '';
+        const limit = hasMedia ? 1024 : 4096;
+
+        charCount.innerText = `${len} / ${limit}`;
+        if (len > limit) {
+            charCount.style.color = '#fca5a5';
+            charCount.style.fontWeight = 'bold';
+        } else {
+            charCount.style.color = '#94a3b8';
+            charCount.style.fontWeight = 'normal';
+        }
+    }
+
+    if (textArea) {
+        textArea.addEventListener('input', updateCharCount);
+    }
+    if (mediaInput) {
+        mediaInput.addEventListener('change', updateCharCount);
+    }
+
+    // Form Client-Side Validation
+    document.getElementById('postForm').addEventListener('submit', function (e) {
+        const errorBox = document.getElementById('form-error');
+        const errorText = document.getElementById('error-text');
+
+        // 1. Check channels
+        const channels = document.querySelectorAll('input[name="channels"]:checked');
+        if (channels.length === 0) {
+            e.preventDefault();
+            errorText.textContent = 'Оберіть хоча б один канал для публікації.';
+            errorBox.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // 2. Check scheduled time in future
+        const isScheduled = document.querySelector('input[value="scheduled"]').checked;
+        if (isScheduled) {
+            const timeVal = document.getElementById('scheduled_at').value;
+            if (!timeVal) {
+                e.preventDefault();
+                errorText.textContent = 'Оберіть дату та час для майбутнього поста.';
+                errorBox.style.display = 'block';
+                return;
+            }
+            const selectedTime = new Date(timeVal).getTime();
+            const now = new Date().getTime();
+            if (selectedTime <= now) {
+                e.preventDefault();
+                errorText.textContent = 'Час запланованого поста має бути у майбутньому!';
+                errorBox.style.display = 'block';
+                return;
+            }
+        }
+
+        // 3. Check text limits
+        const textLen = textArea.value.length;
+        const hasMedia = (mediaInput && mediaInput.files.length > 0) || '{{ post.media_path }}' !== '';
+        const limit = hasMedia ? 1024 : 4096;
+        if (textLen > limit) {
+            e.preventDefault();
+            errorText.textContent = `Текст перевищує ліміт! (${textLen} / ${limit} символів).`;
+            errorBox.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        errorBox.style.display = 'none';
+    });
+
+    // Initial call
+    updateCharCount();
+</script>
+{% endblock %}

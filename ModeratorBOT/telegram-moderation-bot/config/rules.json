@@ -1,0 +1,144 @@
+{
+    "rules": [
+        {
+            "id": "spam_1",
+            "name": "Чорний список слів",
+            "detectors": [
+                "spam_detector"
+            ],
+            "condition": {
+                "detector": "spam",
+                "field": "reason",
+                "operator": "equals",
+                "value": "blacklist_match"
+            },
+            "actions": [
+                {
+                    "action": "delete",
+                    "delay": 0
+                },
+                {
+                    "action": "ban",
+                    "delay": 1
+                }
+            ],
+            "priority": 100
+        },
+        {
+            "id": "spam_2",
+            "name": "Комерційні лінки",
+            "detectors": [
+                "spam_detector"
+            ],
+            "condition": {
+                "detector": "spam",
+                "field": "reason",
+                "operator": "equals",
+                "value": "suspicious_urls"
+            },
+            "actions": [
+                {
+                    "action": "delete",
+                    "delay": 0
+                },
+                {
+                    "action": "ban",
+                    "delay": 1
+                }
+            ],
+            "priority": 95
+        },
+        {
+            "id": "flood_1",
+            "name": "Детектор флуду - Warning",
+            "detectors": [
+                "flood_detector"
+            ],
+            "condition": {
+                "detector": "flood",
+                "field": "level",
+                "operator": "equals",
+                "value": "warning"
+            },
+            "actions": [
+                {
+                    "action": "delete",
+                    "delay": 0
+                }
+            ],
+            "priority": 90
+        },
+        {
+            "id": "flood_2",
+            "name": "Детектор флуду - Timeout",
+            "detectors": [
+                "flood_detector"
+            ],
+            "condition": {
+                "detector": "flood",
+                "field": "level",
+                "operator": "equals",
+                "value": "timeout"
+            },
+            "actions": [
+                {
+                    "action": "delete",
+                    "delay": 0
+                },
+                {
+                    "action": "mute",
+                    "delay": 1
+                }
+            ],
+            "priority": 92
+        },
+        {
+            "id": "flood_3",
+            "name": "Детектор флуду - Ban",
+            "detectors": [
+                "flood_detector"
+            ],
+            "condition": {
+                "detector": "flood",
+                "field": "level",
+                "operator": "equals",
+                "value": "ban"
+            },
+            "actions": [
+                {
+                    "action": "remove",
+                    "delay": 0
+                },
+                {
+                    "action": "report_admin",
+                    "delay": 1
+                }
+            ],
+            "priority": 95
+        },
+        {
+            "id": "fake_1",
+            "name": "Фейк-розсилки",
+            "detectors": [
+                "fake_distribution_detector"
+            ],
+            "condition": {
+                "detector": "fake",
+                "field": "is_fake",
+                "operator": "equals",
+                "value": true
+            },
+            "actions": [
+                {
+                    "action": "delete",
+                    "delay": 0
+                },
+                {
+                    "action": "ban",
+                    "delay": 1
+                }
+            ],
+            "priority": 90
+        }
+    ]
+}

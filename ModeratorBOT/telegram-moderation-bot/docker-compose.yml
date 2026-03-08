@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  moderator_bot:
+    build: .
+    container_name: obwepit_moderator
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

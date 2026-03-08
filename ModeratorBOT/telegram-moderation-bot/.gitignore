@@ -1,0 +1,8 @@
+telegram-moderation-bot/venv
+telegram-moderation-bot/.env
+telegram-moderation-bot/*.pyc
+telegram-moderation-bot/__pycache__
+telegram-moderation-bot/logs/*
+!telegram-moderation-bot/logs/.gitkeep
+telegram-moderation-bot/db.sqlite3
+telegram-moderation-bot/.pytest_cache/

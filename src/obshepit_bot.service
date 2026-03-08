@@ -1,0 +1,14 @@
+[Unit]
+Description=Telegram Bot "Общепіт" (Auto-Approve)
+After=network.target
+
+[Service]
+User=root
+# Якщо ви використовуєте іншого користувача, замініть root на його ім'я
+WorkingDirectory=/opt/obshepit_bot
+ExecStart=/opt/obshepit_bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

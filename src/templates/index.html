@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Метрики -->
+<div class="metrics-grid">
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Сьогодні апрувів</div>
+        <div class="metric-value">{{ today_approvals }}</div>
+        {% if today_channel_approvals %}
+        <div
+            style="font-size: 0.85rem; color: #94a3b8; margin-top: 1rem; text-align: left; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 8px;">
+            {% for item in today_channel_approvals %}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;"
+                    title="{{ item.channel_name }}">{{ item.channel_name }}</span>
+                <span style="color: #4ade80; font-weight: 600;">+{{ item.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Всього юзерів у базі</div>
+        <div class="metric-value">{{ total_bot_users }}</div>
+    </div>
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Каналів у роботі</div>
+        <div class="metric-value">{{ channels|length }}</div>
+    </div>
+</div>
+
+<!-- Графіки -->
+<div class="charts-grid">
+    <div class="glass-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="margin: 0;">Динаміка Апрувів</h3>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="/?period=week"
+                    style="padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: all 0.2s; {% if period == 'week' %}background: var(--accent-color); color: #fff;{% else %}background: rgba(255,255,255,0.1); color: #94a3b8;{% endif %}">Week</a>
+                <a href="/?period=month"
+                    style="padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: all 0.2s; {% if period == 'month' %}background: var(--accent-color); color: #fff;{% else %}background: rgba(255,255,255,0.1); color: #94a3b8;{% endif %}">Month</a>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="approvalsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="two-col">
+    <!-- Керування каналами -->
+    <div class="glass-panel">
+        <h3>Канали</h3>
+        <form action="/channels/add" method="POST" style="margin-top: 1rem;">
+            <div class="form-group">
+                <input type="text" name="title" placeholder="Назва (напр. Общепіт Київ)" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="link" placeholder="Посилання (t.me/...)" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="chat_id" placeholder="Chat ID (напр. -100123...)" required>
+            </div>
+            <button type="submit">Додати канал</button>
+            <small style="color: #94a3b8; display: block; margin-top: 0.5rem;">
+                Бот вже має бути адміністратором у цьому каналі.
+            </small>
+        </form>
+
+        <table style="margin-top: 2rem;">
+            <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>ID</th>
+                    <th>Тип</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ch in channels %}
+                <tr>
+                    <td><a href="{{ ch.link }}" target="_blank" style="color: #3b82f6;">{{ ch.title }}</a></td>
+                    <td>{{ ch.chat_id }}</td>
+                    <td><span
+                            class="status-badge {% if ch.type == 'канал' %}status-pending{% else %}status-completed{% endif %}">{{
+                            ch.type or 'канал' }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Розсилки -->
+    <div class="glass-panel">
+        <h3>Масова Розсилка</h3>
+        <form action="/broadcast/test" method="POST" style="margin-top: 1rem;">
+            <div class="form-group">
+                <label>Текст повідомлення (піде по всій базі користувачів):</label>
+                <textarea name="message_text" rows="4" required></textarea>
+            </div>
+            <button type="submit" style="background: #8b5cf6;">🚀 Запустити розсилку</button>
+        </form>
+
+        <h4 style="margin-top: 2rem; color: #e2e8f0;">Останні розсилки</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Текст</th>
+                    <th>Статус</th>
+                    <th>✅</th>
+                    <th>❌</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in broadcasts %}
+                <tr>
+                    <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ b.text }}
+                    </td>
+                    <td><span class="status-badge status-{{ b.status }}">{{ b.status }}</span></td>
+                    <td style="color: #4ade80;">{{ b.sent_count }}</td>
+                    <td style="color: #f87171;">{{ b.failed_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Ініціалізація Графіку -->
+<script>
+    Chart.register(ChartDataLabels);
+    const ctx = document.getElementById('approvalsChart').getContext('2d');
+
+    // Дані з Jinja (FastAPI)
+    const labels = {{ chart_labels | tojson | safe }};
+    const datasets = {{ chart_datasets | tojson | safe }};
+    const dailyTotals = {{ daily_totals | tojson | safe }};
+
+    // Додаємо datalabels лише до останнього dataset
+    datasets.forEach((ds, i) => {
+        if (i < datasets.length - 1) {
+            ds.datalabels = { display: false };
+        } else {
+            ds.datalabels = {
+                display: true,
+                anchor: 'end',
+                align: 'end',
+                color: '#e2e8f0',
+                font: { weight: 'bold', size: 13 },
+                formatter: function (value, context) {
+                    return dailyTotals[context.dataIndex];
+                }
+            };
+        }
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#e2e8f0', usePointStyle: true, boxWidth: 8 }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        afterBody: function (items) {
+                            const idx = items[0].dataIndex;
+                            return '\u0412сього: ' + dailyTotals[idx];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    stacked: true,
+                    max: 75,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#94a3b8', stepSize: 5 }
+                },
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

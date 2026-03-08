@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Користувачі{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="margin-top: 2rem;">
+    <h3>Всі Користувачі (Останні зареєстровані зверху)</h3>
+    <div style="overflow-x: auto;">
+        <table style="margin-top: 1rem; width: 100%;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Ім'я</th>
+                    <th>Прізвище</th>
+                    <th>Дата Реєстрації</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td style="color: #94a3b8;">{{ u.user_id }}</td>
+                    <td>
+                        {% if u.username %}
+                        <a href="https://t.me/{{ u.username }}" target="_blank" style="color: #3b82f6;">@{{ u.username
+                            }}</a>
+                        {% else %}
+                        <span style="color: #64748b;">Немає</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.first_name }}</td>
+                    <td>{{ u.last_name or '' }}</td>
+                    <td style="color: #94a3b8;">{{ u.joined_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

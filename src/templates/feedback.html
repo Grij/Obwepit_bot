@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Альварес{% endblock %}
+
+{% block content %}
+<!-- Метрики -->
+<div class="metrics-grid">
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Повідомлень сьогодні</div>
+        <div class="metric-value">{{ today_messages }}</div>
+        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+            📥 {{ today_incoming }} вхідних &nbsp;|&nbsp; 📤 {{ today_outgoing }} відповідей
+        </div>
+    </div>
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Всього юзерів</div>
+        <div class="metric-value">{{ total_users }}</div>
+    </div>
+    <div class="glass-panel metric-card">
+        <div class="metric-label">Заблоковано</div>
+        <div class="metric-value" style="color: #f87171;">{{ banned_count }}</div>
+    </div>
+</div>
+
+<div class="two-col">
+    <!-- Розсилка -->
+    <div class="glass-panel">
+        <h3>Розсилка по юзерам бота</h3>
+        <form action="/feedback/broadcast" method="POST" style="margin-top: 1rem;">
+            <div class="form-group">
+                <label>Текст повідомлення (піде всім юзерам @Obwepit_bot):</label>
+                <textarea name="message_text" rows="4" required></textarea>
+            </div>
+            <button type="submit" style="background: #8b5cf6;">🚀 Запустити розсилку</button>
+        </form>
+
+        <h4 style="margin-top: 2rem; color: #e2e8f0;">Останні розсилки</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Текст</th>
+                    <th>Статус</th>
+                    <th>✅</th>
+                    <th>❌</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in broadcasts %}
+                <tr>
+                    <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ b.text }}
+                    </td>
+                    <td><span class="status-badge status-{{ b.status }}">{{ b.status }}</span></td>
+                    <td style="color: #4ade80;">{{ b.sent_count }}</td>
+                    <td style="color: #f87171;">{{ b.failed_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Чорний список -->
+    <div class="glass-panel">
+        <h3>Чорний список</h3>
+        {% if blacklist %}
+        <table style="margin-top: 1rem;">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Причина</th>
+                    <th>Дата</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in blacklist %}
+                <tr>
+                    <td><code>{{ b.user_id }}</code></td>
+                    <td>{{ b.reason }}</td>
+                    <td style="color: #94a3b8;">{{ b.banned_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #64748b; margin-top: 1rem;">Чорний список порожній 🎉</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Користувачі бота -->
+<div class="glass-panel" style="margin-top: 1.5rem;">
+    <h3>Користувачі бота ({{ total_users }})</h3>
+    <div style="overflow-x: auto;">
+        <table style="margin-top: 1rem;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Ім'я</th>
+                    <th>Прізвище</th>
+                    <th>Дата</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in feedback_users %}
+                <tr>
+                    <td><code>{{ u.user_id }}</code></td>
+                    <td>
+                        {% if u.username %}
+                        <a href="https://t.me/{{ u.username }}" target="_blank" style="color: #3b82f6;">@{{ u.username
+                            }}</a>
+                        {% else %}
+                        <span style="color: #64748b;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.first_name or '—' }}</td>
+                    <td>{{ u.last_name or '—' }}</td>
+                    <td style="color: #94a3b8;">{{ u.joined_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
